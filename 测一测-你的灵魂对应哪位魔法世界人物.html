@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1220">
+<title>测一测|你的灵魂对应哪位魔法世界人物</title>
+<style>
+/* ============ 1. 设计变量：夜空 / 烛火 / 羊皮纸 ============ */
+:root{
+  --canvas:#0B1220;          /* 夜空底：蓝黑，不纯黑 */
+  --canvas-2:#090F1A;
+  --world:#16324A;           /* 远处城堡的蓝瓦 */
+  --accent:#E7B25F;          /* 烛火金：只给进度、选中、蜡封 */
+  --accent-deep:#B67F33;
+  --mint:#8FB6A6;            /* 魔药瓶里的淡绿，只在次要信息出现一次 */
+  --ink:#F0E7D6;             /* 暖白，不用纯白 */
+  --ink-2:#9EACBE;
+  --parch:#EFE4CC;           /* 羊皮纸 */
+  --parch-2:#E3D5B8;
+  --ink-p:#1C2531;           /* 纸上的墨 */
+  --ink-p2:#6B6350;
+
+  --r-shell:30px;
+  --r-card:18px;
+  --r-ctl:10px;
+  --r-pill:999px;
+
+  --sh-card: 0 1px 2px rgba(9,15,26,.28), 0 10px 26px -10px rgba(9,15,26,.55), 0 30px 70px -30px rgba(9,15,26,.7);
+  --sh-phone: 0 0 0 1px rgba(231,178,95,.14), 0 2px 4px rgba(0,0,0,.4), 0 40px 90px -20px rgba(0,0,0,.85);
+  --sh-gold: 0 8px 24px -10px rgba(231,178,95,.55);
+
+  --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;
+
+  --ease:cubic-bezier(.22,.75,.3,1);
+  --hud:84px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--canvas-2);color:var(--ink);
+  font-family:var(--sans);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{display:block}
+
+/* ============ 2. 桌面：手机取景框 + 魔法世界的夜空台面 ============ */
+.stage{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(231,178,95,.13), transparent 62%),
+    radial-gradient(80% 60% at 90% 100%, rgba(143,182,166,.10), transparent 70%),
+    linear-gradient(180deg,#0C1524 0%,#080D16 60%,#06090F 100%);
+  overflow:hidden;
+}
+/* 远山的城堡剪影：一层造型，不是装饰噪音 */
+.castle{position:absolute;left:50%;bottom:-2vh;transform:translateX(-50%);
+  width:min(1200px,150vw);opacity:.42;pointer-events:none}
+
+/* ============ 3. 手机面板（手机上就是全屏） ============ */
+.phone{
+  position:relative;width:min(100vw,468px);height:min(100dvh,884px);
+  background:linear-gradient(180deg,#0E1826 0%,#0A111C 62%,#0C1522 100%);
+  border-radius:var(--r-shell);box-shadow:var(--sh-phone);
+  overflow:hidden;display:flex;flex-direction:column;isolation:isolate;
+}
+@media(max-width:640px){
+  .phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}
+  .castle{opacity:.3}
+}
+/* 顶部光晕 + 星点：一层 sky 铺满，全站共用 */
+.sky{position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(72% 40% at 50% -6%, rgba(231,178,95,.20), transparent 70%),
+    radial-gradient(40% 30% at 88% 12%, rgba(143,182,166,.09), transparent 70%);
+}
+.sky::before{
+  content:"";position:absolute;inset:0;opacity:.55;
+  background:
+    radial-gradient(1.4px 1.4px at 12% 16%,rgba(240,231,214,.85),transparent 65%),
+    radial-gradient(1.2px 1.2px at 78% 11%,rgba(240,231,214,.7),transparent 65%),
+    radial-gradient(1.6px 1.6px at 32% 9%,rgba(231,178,95,.8),transparent 65%),
+    radial-gradient(1px 1px at 62% 24%,rgba(240,231,214,.65),transparent 65%),
+    radial-gradient(1.5px 1.5px at 88% 34%,rgba(240,231,214,.6),transparent 65%),
+    radial-gradient(1.2px 1.2px at 22% 38%,rgba(240,231,214,.55),transparent 65%),
+    radial-gradient(1.8px 1.8px at 46% 6%,rgba(240,231,214,.75),transparent 65%),
+    radial-gradient(1px 1px at 70% 44%,rgba(143,182,166,.6),transparent 65%),
+    radial-gradient(1.3px 1.3px at 8% 52%,rgba(240,231,214,.4),transparent 65%),
+    radial-gradient(1.1px 1.1px at 94% 58%,rgba(240,231,214,.35),transparent 65%);
+  animation:twinkle 9s ease-in-out infinite alternate;
+}
+@keyframes twinkle{from{opacity:.35}to{opacity:.7}}
+
+/* ============ 4. 顶部状态条 ============ */
+.hud{
+  position:relative;z-index:40;flex:none;
+  padding:calc(env(safe-area-inset-top) + 16px) 20px 0;
+  min-height:var(--hud);
+}
+.hud-row{display:flex;align-items:center;gap:10px;height:26px}
+.hud-tag{font-size:11.5px;letter-spacing:.14em;color:var(--mint);font-weight:600;text-transform:uppercase}
+.hud-count{margin-left:auto;font-size:12px;letter-spacing:.06em;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.hud-count b{color:var(--ink);font-weight:700}
+.bar{margin-top:12px;height:3px;border-radius:3px;background:rgba(240,231,214,.14);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent));
+  box-shadow:0 0 14px rgba(231,178,95,.7);transition:width .5s var(--ease)}
+.back{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-2);
+  padding:4px 8px 4px 0;border-radius:var(--r-ctl);opacity:0;pointer-events:none;transition:opacity .3s}
+.back.on{opacity:1;pointer-events:auto}
+.back:active{color:var(--accent)}
+.back svg{width:13px;height:13px}
+
+/* ============ 5. 屏幕容器 ============ */
+.screen{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;overflow:hidden}
+.screen.on{display:flex}
+.pad{padding:0 22px calc(env(safe-area-inset-bottom) + 22px)}
+
+/* ============ 6. 启动页 ============ */
+#intro{padding-top:calc(var(--hud) + 4px);justify-content:center;overflow-y:auto}
+.crest{width:74px;height:88px;margin:0 auto 22px;position:relative}
+.crest svg{width:100%;height:100%}
+.eyebrow{text-align:center;font-size:11.5px;letter-spacing:.22em;color:var(--accent);
+  text-transform:uppercase;margin-bottom:14px}
+#intro h1{
+  font-family:var(--serif);font-size:clamp(29px,8.6vw,40px);line-height:1.36;
+  text-align:center;letter-spacing:.01em;color:var(--ink);font-weight:700;
+  text-wrap:balance;
+}
+#intro h1 .pipe{color:var(--accent);margin:0 .12em}
+.lead{max-width:23em;margin:20px auto 0;text-align:center;font-size:14.5px;line-height:1.85;color:var(--ink-2)}
+.lead em{font-style:normal;color:var(--ink)}
+.rules{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.rules span{font-size:11.5px;color:var(--ink-2);padding:6px 11px;border-radius:var(--r-pill);
+  background:rgba(240,231,214,.055);border:1px solid rgba(240,231,214,.09)}
+.start-wrap{margin-top:32px;padding:0 4px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;height:54px;border-radius:var(--r-pill);font-size:16px;font-weight:700;
+  transition:transform .2s var(--ease),box-shadow .2s,background .2s}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:linear-gradient(180deg,#F0C176,#E7B25F 55%,#D29441);color:#20180A;
+  box-shadow:var(--sh-gold),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn-ghost{background:rgba(240,231,214,.07);color:var(--ink);border:1px solid rgba(240,231,214,.16)}
+.btn-dark{background:#141F2E;color:var(--parch);border:1px solid rgba(240,231,214,.14)}
+.btn svg{width:17px;height:17px}
+.foot{margin-top:18px;text-align:center;font-size:10.5px;line-height:1.7;color:rgba(158,172,190,.7);padding:0 10px}
+
+/* ============ 7. 答题页 ============ */
+#quiz{padding-top:calc(var(--hud) + 2px)}
+.qwrap{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:0 22px calc(env(safe-area-inset-bottom) + 20px)}
+/* 巨大的题号水印：填空，而不是拿装饰去填 */
+.qwm{position:absolute;right:14px;top:16px;z-index:0;font-family:var(--serif);
+  font-size:96px;line-height:.8;color:rgba(231,178,95,.08);pointer-events:none;letter-spacing:-.02em}
+@keyframes qin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.qwrap.in{animation:qin .38s var(--ease) both}
+.qnum{font-family:var(--serif);font-size:13px;letter-spacing:.1em;color:var(--accent)}
+.qtext{font-family:var(--serif);font-size:clamp(21px,5.6vw,26px);line-height:1.5;
+  color:var(--ink);margin:14px 0 26px;font-weight:700;text-wrap:pretty}
+.opts{display:grid;gap:11px}
+.opt{display:flex;align-items:flex-start;gap:12px;text-align:left;
+  padding:15px 16px;min-height:58px;border-radius:var(--r-card);font-size:14.5px;line-height:1.6;
+  color:#D5DFEB;background:rgba(240,231,214,.045);
+  border:1px solid rgba(240,231,214,.10);
+  transition:background .22s,border-color .22s,transform .16s,color .22s,opacity .25s}
+.opt .k{flex:none;width:23px;height:23px;border-radius:50%;
+  border:1px solid rgba(240,231,214,.26);color:var(--ink-2);
+  display:grid;place-items:center;font-size:10.5px;font-weight:700;letter-spacing:.04em;
+  transition:all .22s}
+.opt .ck{flex:none;margin-left:auto;width:17px;height:17px;opacity:0;transform:scale(.7);
+  transition:all .22s}
+.opt:active{transform:scale(.985);background:rgba(240,231,214,.09)}
+.opt.sel{background:rgba(231,178,95,.13);border-color:rgba(231,178,95,.62);color:#FFF6E4;
+  box-shadow:0 0 0 1px rgba(231,178,95,.22) inset,0 12px 30px -16px rgba(231,178,95,.6)}
+.opt.sel .k{background:var(--accent);border-color:var(--accent);color:#20180A}
+.opt.sel .ck{opacity:1;transform:scale(1)}
+.opt.fade{opacity:.42}
+.qhint{margin-top:16px;font-size:11.5px;color:rgba(158,172,190,.65);text-align:center;letter-spacing:.02em}
+
+/* ============ 8. 分院帽思考页 ============ */
+#think{align-items:center;justify-content:center;text-align:center;padding:0 30px}
+.ring{width:132px;height:132px;position:relative;margin-bottom:30px}
+.ring svg{width:100%;height:100%}
+.ring .spin{animation:spin 14s linear infinite}
+.ring .pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+.think-title{font-family:var(--serif);font-size:22px;letter-spacing:.04em;color:var(--ink)}
+.think-line{margin-top:12px;font-size:13.5px;color:var(--ink-2);height:20px;transition:opacity .3s}
+.think-line.hide{opacity:0}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:26px}
+.dots i{width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:.3;animation:blink 1.1s infinite}
+.dots i:nth-child(2){animation-delay:.18s}
+.dots i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,100%{opacity:.25}45%{opacity:1}}
+
+/* ============ 9. 结果页 ============ */
+#result{padding-top:calc(var(--hud) + 2px);overflow:hidden}
+.result-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 16px calc(env(safe-area-inset-bottom) + 24px);scrollbar-width:none}
+.result-scroll::-webkit-scrollbar{display:none}
+.rcard{
+  position:relative;background:linear-gradient(170deg,var(--parch) 0%,var(--parch-2) 100%);
+  color:var(--ink-p);border-radius:22px;padding:22px 20px 20px;
+  box-shadow:var(--sh-card);overflow:hidden;
+}
+/* 纸纹：极淡的横纹 + 边缘压暗，不用噪点图 */
+.rcard::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:
+    repeating-linear-gradient(0deg,rgba(107,99,80,.055) 0 1px,transparent 1px 4px),
+    radial-gradient(90% 62% at 50% 0%,rgba(255,255,255,.55),transparent 70%),
+    radial-gradient(120% 90% at 50% 118%,rgba(120,100,64,.22),transparent 60%)}
+.rcard>*{position:relative;z-index:1}
+.r-top{display:flex;align-items:flex-start;gap:12px}
+.r-top .r-pct{margin-left:auto}
+.r-kicker{font-size:10.5px;letter-spacing:.2em;color:var(--ink-p2);text-transform:uppercase}
+.r-name{font-family:var(--serif);font-size:clamp(27px,7.4vw,33px);line-height:1.24;
+  margin-top:10px;letter-spacing:.01em;font-weight:700;overflow-wrap:anywhere}
+.r-tag{font-size:12px;color:var(--ink-p2);margin-top:7px;letter-spacing:.04em;line-height:1.5}
+.r-pct{flex:none;text-align:right;display:flex;align-items:baseline;gap:4px}
+.r-pct b{font-family:var(--serif);font-size:27px;line-height:1;letter-spacing:-.02em}
+.r-pct span{font-size:10px;letter-spacing:.1em;color:var(--ink-p2)}
+.r-rule{height:1px;background:rgba(28,37,49,.15);margin:18px 0 16px}
+.sec-h{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.16em;
+  color:var(--ink-p2);text-transform:uppercase;margin-bottom:9px}
+.sec-h::after{content:"";flex:1;height:1px;background:rgba(28,37,49,.14)}
+.sec-p{font-size:14.5px;line-height:1.85;color:#26303C}
+.sec-p + .sec-h{margin-top:20px}
+.egg{background:rgba(28,37,49,.055);border-radius:14px;padding:14px;margin-top:2px;
+  font-size:13.5px;line-height:1.8;color:#33404E;border:1px solid rgba(28,37,49,.08)}
+.egg b{color:var(--accent-deep)}
+
+/* 六维：结果页自己的指纹，方便截图 */
+.dims{display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-top:14px}
+.dim{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-p2)}
+.dim .n{width:2.1em;flex:none}
+.dim .t{flex:1;height:3px;border-radius:3px;background:rgba(28,37,49,.14);overflow:hidden}
+.dim .t i{display:block;height:100%;width:0;background:var(--world);border-radius:3px;
+  transition:width 1s var(--ease)}
+.dim b{font-variant-numeric:tabular-nums;color:var(--ink-p);font-weight:700;font-size:11px;width:2.2em;text-align:right}
+
+/* 别人的影子：第二名 */
+.runner{margin-top:14px;font-size:12px;color:var(--ink-p2);line-height:1.7}
+.runner b{color:var(--ink-p);font-weight:700}
+
+/* slogan 块 */
+.slogan{margin-top:18px;background:#14202E;border-radius:16px;padding:16px 16px 14px;color:var(--parch)}
+.slogan .q{font-family:var(--serif);font-size:17px;line-height:1.6;letter-spacing:.01em}
+.slogan .q::before{content:"“";color:var(--accent);font-size:22px;margin-right:2px}
+.slogan .q::after{content:"”";color:var(--accent);font-size:22px}
+.slogan .row{display:flex;align-items:center;gap:8px;margin-top:12px}
+.slogan .row span{font-size:10.5px;letter-spacing:.14em;color:rgba(239,228,204,.5);text-transform:uppercase}
+.copy{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11.5px;
+  padding:6px 12px;border-radius:var(--r-pill);background:rgba(231,178,95,.16);
+  color:var(--accent);border:1px solid rgba(231,178,95,.32)}
+.copy:active{background:rgba(231,178,95,.28)}
+.copy svg{width:12px;height:12px}
+.stamp{position:absolute;right:-16px;top:-16px;width:104px;height:104px;opacity:.12;
+  pointer-events:none;z-index:0!important}
+.acts{display:grid;gap:10px;margin-top:14px}
+.disclaimer{margin-top:14px;font-size:10.5px;line-height:1.7;text-align:center;color:rgba(158,172,190,.62)}
+
+/* 结果入场 */
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.anim{animation:up .6s var(--ease) both}
+.d1{animation-delay:.06s}.d2{animation-delay:.14s}.d3{animation-delay:.22s}.d4{animation-delay:.3s}
+
+/* toast */
+.toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 92px);
+  transform:translate(-50%,14px);z-index:80;opacity:0;pointer-events:none;
+  background:rgba(20,31,46,.96);color:var(--parch);font-size:13px;
+  padding:11px 18px;border-radius:var(--r-pill);border:1px solid rgba(231,178,95,.28);
+  transition:all .35s var(--ease);white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media(max-height:720px){
+  .crest{width:58px;height:70px;margin-bottom:14px}
+  #intro h1{font-size:clamp(25px,8.4vw,32px)}
+  .lead{margin-top:14px;font-size:13.5px;line-height:1.78}
+  .rules{margin-top:16px}
+  .start-wrap{margin-top:24px}
+  .foot{margin-top:12px}
+  .qtext{margin:10px 0 18px}
+  .opt{padding:13px 15px;min-height:52px;font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <!-- 远处城堡：一层剪影，给桌面一点世界感 -->
+  <svg class="castle" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+    <defs>
+      <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#16324A"/><stop offset="1" stop-color="#0A111C"/>
+      </linearGradient>
+    </defs>
+    <g fill="url(#cg)">
+      <rect x="0" y="196" width="1200" height="64"/>
+      <path d="M120 196V120l10-26 10 26v76zM160 196V96l10-24 10 24v100zM88 196V140l8-20 8 20v56z"/>
+      <rect x="128" y="132" width="28" height="64"/><rect x="196" y="150" width="40" height="46"/>
+      <path d="M470 196V70l14-34 14 34v126zM512 196V52l16-36 16 36v144zM548 196V92l12-28 12 28v104z"/>
+      <rect x="462" y="120" width="112" height="76"/>
+      <path d="M700 196V128l10-24 10 24v68zM740 196V104l12-28 12 28v92z"/>
+      <path d="M880 196V84l14-32 14 32v112zM918 196V118l10-22 10 22v78z"/>
+      <rect x="990" y="150" width="120" height="46"/><rect x="1020" y="128" width="60" height="68"/>
+      <path d="M1030 128V100l10-22 10 22v28zM1060 128V96l8-20 8 20v32z"/>
+    </g>
+  </svg>
+
+  <div class="phone">
+    <div class="sky"></div>
+
+    <!-- 顶部进度条 -->
+    <div class="hud">
+      <div class="hud-row">
+        <button class="back" id="backBtn" aria-label="上一题">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+          上一题
+        </button>
+        <span class="hud-tag" id="hudTag">霍格沃茨 · 分院帽</span>
+        <span class="hud-count" id="hudCount"></span>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+    </div>
+
+    <!-- 启动页 -->
+    <section class="screen on" id="intro">
+      <div class="pad" style="flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div class="crest">
+          <svg viewBox="0 0 74 88" fill="none" aria-hidden="true">
+            <path d="M37 2 70 14v34c0 20-14 32-33 38-19-6-33-18-33-38V14z"
+                  stroke="#E7B25F" stroke-width="1.6" fill="rgba(231,178,95,.06)"/>
+            <path d="M37 10 63 19v28c0 15-11 25-26 30-15-5-26-15-26-30V19z"
+                  stroke="rgba(240,231,214,.22)" stroke-width="1"/>
+            <!-- 烛火 -->
+            <path d="M37 30c4 4 6 7 6 11 0 4.2-2.7 7-6 7s-6-2.8-6-7c0-4 2-7 6-11z" fill="#E7B25F" opacity=".9"/>
+            <path d="M37 38c1.6 2 2.4 3.4 2.4 5.2 0 2-1 3.4-2.4 3.4s-2.4-1.4-2.4-3.4c0-1.8.8-3.2 2.4-5.2z" fill="#FFF6E4"/>
+            <rect x="35.4" y="46" width="3.2" height="14" rx="1.6" fill="rgba(240,231,214,.5)"/>
+            <path d="M37 66l1.8 4.6 4.8.3-3.7 3.1 1.2 4.7-4.1-2.7-4.1 2.7 1.2-4.7-3.7-3.1 4.8-.3z" fill="#E7B25F" opacity=".8"/>
+          </svg>
+        </div>
+        <p class="eyebrow">The Sorting Hat</p>
+        <h1>测一测<span class="pipe">|</span>你的灵魂<br>对应哪位魔法世界人物</h1>
+        <p class="lead">
+          四十道题，不问你会不会念咒，只问你日常里那些<em>下意识的小动作</em>。<br>
+          答完，帽子会告诉你：你的灵魂住在谁身上。
+        </p>
+        <div class="rules">
+          <span>40 题 · 约 3 分钟</span>
+          <span>不用懂魔法</span>
+          <span>可反复重测</span>
+        </div>
+        <div class="start-wrap">
+          <button class="btn btn-primary" id="startBtn">
+            开始测试
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <p class="foot">人物与世界观出自 J.K. 罗琳《哈利·波特》系列小说。<br>本测试为同人趣味玩法，与官方无关。</p>
+      </div>
+    </section>
+
+    <!-- 答题页 -->
+    <section class="screen" id="quiz">
+      <div class="qwrap" id="qwrap"></div>
+    </section>
+
+    <!-- 分院帽思考 -->
+    <section class="screen" id="think">
+      <div class="ring">
+        <svg viewBox="0 0 132 132" fill="none" aria-hidden="true">
+          <g class="spin">
+            <circle cx="66" cy="66" r="56" stroke="rgba(231,178,95,.28)" stroke-width="1" stroke-dasharray="3 9"/>
+            <circle cx="66" cy="66" r="48" stroke="rgba(240,231,214,.12)" stroke-width="1"/>
+          </g>
+          <g class="pulse">
+            <circle cx="66" cy="66" r="34" fill="rgba(231,178,95,.1)"/>
+            <circle cx="66" cy="66" r="34" stroke="rgba(231,178,95,.5)" stroke-width="1"/>
+            <path d="M66 44c7 7 11 13 11 20 0 7.6-4.9 12.6-11 12.6s-11-5-11-12.6c0-7 4-13 11-20z" fill="#E7B25F" opacity=".92"/>
+            <path d="M66 58c2.6 3.2 4 5.6 4 8.6 0 3.4-1.8 5.6-4 5.6s-4-2.2-4-5.6c0-3 1.4-5.4 4-8.6z" fill="#FFF6E4"/>
+          </g>
+        </svg>
+      </div>
+      <p class="think-title">分院帽正在思考</p>
+      <p class="think-line" id="thinkLine">它正在翻阅那份很长的名单……</p>
+      <div class="dots"><i></i><i></i><i></i></div>
+    </section>
+
+    <!-- 结果页 -->
+    <section class="screen" id="result">
+      <div class="result-scroll" id="resultScroll"></div>
+    </section>
+
+    <div class="toast" id="toast">已复制</div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   数据区：40 道题 + 30 位人物
+   每道题的 4 个选项各给 2 个维度加分（主 2 + 副 1）
+   维度顺序：[勇气, 智性, 秩序, 锋芒, 温度, 趣味]
+   ============================================================ */
+/*DATA-START*/
+const DIMS = ["勇气","智性","秩序","锋芒","温度","趣味"];
+
+const QUESTIONS = [
+  {q:"早上七点，闹钟响到第三遍。", o:[
+    {t:"立刻坐起来，躺着只会更难受", w:[2,0,1,0,0,0]},
+    {t:"再设一个八点的，人生需要缓冲", w:[0,0,0,0,1,2]},
+    {t:"骂一句然后起床，靠意志力硬拖", w:[1,0,0,2,0,0]},
+    {t:"其实通宵到现在，正干着别的事", w:[0,2,0,0,0,1]}]},
+  {q:"走进一家从没去过的店，你会先……", o:[
+    {t:"扫一眼菜单或货架，再决定", w:[0,2,1,0,0,0]},
+    {t:"随便点一个没听过的名字", w:[1,0,0,0,0,2]},
+    {t:"问店员：你最喜欢哪个", w:[0,0,1,0,2,0]},
+    {t:"站在门口看别人都点什么", w:[0,1,0,2,0,0]}]},
+  {q:"群里有人发了个你看不懂的梗。", o:[
+    {t:"立刻去查，搞明白为止", w:[0,2,1,0,0,0]},
+    {t:"回一个更离谱的回去", w:[0,0,0,1,0,2]},
+    {t:"私聊问发的那个人", w:[0,0,1,0,2,0]},
+    {t:"不查，继续干自己的事", w:[0,0,1,2,0,0]}]},
+  {q:"临时改了规则，之前的活全白干。", o:[
+    {t:"先确认是不是所有人都一样", w:[0,2,1,0,0,0]},
+    {t:"直接按新规则重做，骂留给明天", w:[1,0,1,0,0,0]},
+    {t:"去问问能不能通融一下", w:[0,0,0,0,2,1]},
+    {t:"表面淡定，心里已经翻桌", w:[1,0,0,2,0,0]}]},
+  {q:"一屋子陌生人，你多半在……", o:[
+    {t:"角落里观察谁跟谁是一伙的", w:[0,2,0,0,0,1]},
+    {t:"中间那桌，正在讲段子", w:[0,0,0,1,0,2]},
+    {t:"逮住一个人聊到散场", w:[0,1,0,0,2,0]},
+    {t:"帮主人添水、收拾、招呼人", w:[0,0,2,0,1,0]}]},
+  {q:"你的书桌通常是……", o:[
+    {t:"分类文件夹，命名规整", w:[0,1,2,0,0,0]},
+    {t:"一堆便签，只有自己看得懂", w:[0,1,0,0,0,2]},
+    {t:"表面干净，全塞进抽屉了", w:[0,0,1,2,0,0]},
+    {t:"半杯凉掉的茶，三本摊开的书", w:[0,0,0,0,2,1]}]},
+  {q:"有人当面夸你。", o:[
+    {t:"客气两句，赶紧把话题转走", w:[0,0,2,0,1,0]},
+    {t:"心里先想：他是不是有事要拜托我", w:[0,2,0,1,0,0]},
+    {t:"大大方方收下，再夸回去", w:[0,0,0,2,1,0]},
+    {t:"有点别扭，回去反复想那句话", w:[0,0,0,0,2,1]}]},
+  {q:"宿舍只剩一个空位，你希望来的人……", o:[
+    {t:"作息规律，东西不乱放", w:[0,1,2,0,0,0]},
+    {t:"半夜敢拉你出门吃宵夜", w:[0,0,0,0,1,2]},
+    {t:"话不多，但出事了最靠得住", w:[2,0,0,0,1,0]},
+    {t:"认识很多人，能带你进圈子", w:[0,1,0,2,0,0]}]},
+  {q:"排队时旁边新开了一个窗口，没人。", o:[
+    {t:"立刻换过去，谁不换谁傻", w:[0,1,0,2,0,0]},
+    {t:"犹豫，怕原来队伍的人看着", w:[0,0,2,0,1,0]},
+    {t:"招呼后面的人一起过去", w:[1,0,0,0,2,0]},
+    {t:"不动，反正也差不了几分钟", w:[1,0,2,0,0,0]}]},
+  {q:"一件事明显没人管，但它就摆在你眼前。", o:[
+    {t:"顺手就做了，看着难受", w:[0,0,2,0,1,0]},
+    {t:"等有人开口了再说", w:[0,0,1,2,0,0]},
+    {t:"先弄清楚为什么没人管", w:[1,2,0,0,0,0]},
+    {t:"做了，然后换一个人情回来", w:[0,1,0,2,0,0]}]},
+  {q:"深夜刷到一条让你上火的言论。", o:[
+    {t:"打了长回复，又全删了", w:[0,0,0,2,1,0]},
+    {t:"截图发给朋友一起吐槽", w:[0,0,0,0,1,2]},
+    {t:"查资料，准备好好讲道理", w:[0,2,1,0,0,0]},
+    {t:"直接拉黑，世界清净", w:[0,0,0,2,0,1]}]},
+  {q:"你更羡慕哪种厉害？", o:[
+    {t:"平时看不出来，关键时刻一击必中", w:[0,2,0,1,0,0]},
+    {t:"站在最前面，所有人都跟着", w:[1,0,0,2,0,0]},
+    {t:"谁都愿意把心事讲给 TA 听", w:[0,1,0,0,2,0]},
+    {t:"完全按自己的规矩活", w:[1,0,0,0,0,2]}]},
+  {q:"计划被临时打乱了。", o:[
+    {t:"当场重排一遍时间表", w:[0,1,2,0,0,0]},
+    {t:"太好了，那就不做了", w:[0,0,0,0,1,2]},
+    {t:"很烦，但脸上什么都没", w:[0,0,1,2,0,0]},
+    {t:"见招拆招，边走边改", w:[2,0,0,0,0,1]}]},
+  {q:"如果能养一只魔法生物，你选……", o:[
+    {t:"猫头鹰：能飞、能送信，眼神像你", w:[0,2,1,0,0,0]},
+    {t:"猫：不粘人，但你需要时它就在", w:[0,0,0,0,1,2]},
+    {t:"一只大狗：能打、能护、只认一个人", w:[2,0,0,0,1,0]},
+    {t:"会喷火的那种，所有人都劝你别养", w:[0,0,0,1,0,2]}]},
+  {q:"一群人出去玩，你是……", o:[
+    {t:"做攻略、订房、列清单的人", w:[0,1,2,0,0,0]},
+    {t:"什么都不管，到了跟着走", w:[0,0,0,0,1,2]},
+    {t:"关键时候拍板的那个", w:[2,0,0,1,0,0]},
+    {t:"负责让所有人都玩开心的那个", w:[0,0,0,0,2,1]}]},
+  {q:"你说错话，把人得罪了。", o:[
+    {t:"当场道歉，把话说清楚", w:[2,0,0,0,1,0]},
+    {t:"装作没发生，等他忘了", w:[0,0,0,2,0,1]},
+    {t:"找个机会私下补回来", w:[0,2,0,0,1,0]},
+    {t:"嘴上道歉，心里觉得他太敏感", w:[0,0,1,2,0,0]}]},
+  {q:"你心里最怕的是……", o:[
+    {t:"变成一个没用的人", w:[2,0,0,2,0,0]},
+    {t:"被所有人看穿", w:[0,2,0,2,0,0]},
+    {t:"在乎的人对你失望", w:[0,0,1,0,2,0]},
+    {t:"日子就这么平下去", w:[2,0,0,0,0,2]}]},
+  {q:"面前有一扇写着「别进去」的门。", o:[
+    {t:"不进去，但把这件事记住了", w:[0,2,1,0,0,0]},
+    {t:"进去，大不了被骂一顿", w:[2,0,0,0,0,2]},
+    {t:"找个人一起进去", w:[0,0,0,0,1,2]},
+    {t:"先查清是谁写的这行字", w:[0,2,0,1,0,0]}]},
+  {q:"有人说你「太较真」。", o:[
+    {t:"那就较真，事实本来就该是事实", w:[0,1,2,0,0,0]},
+    {t:"笑着收一点，心里不服", w:[0,0,0,2,1,0]},
+    {t:"回去想想他是不是说对了", w:[0,1,0,0,2,0]},
+    {t:"把「较真」当夸奖收下", w:[1,0,0,2,0,0]}]},
+  {q:"你收到一个明显不公平的评价。", o:[
+    {t:"当场讲清楚", w:[2,0,0,1,0,0]},
+    {t:"回去写下来，反复想", w:[0,2,0,0,1,0]},
+    {t:"找信任的人确认：我真有问题吗", w:[0,0,0,0,2,1]},
+    {t:"不吵，用结果说话", w:[0,0,1,2,0,0]}]},
+  {q:"一群人吵成一团，做不了决定。", o:[
+    {t:"抛一个新方案，把争吵绕开", w:[0,2,0,0,0,1]},
+    {t:"拍桌子定一个", w:[2,0,0,1,0,0]},
+    {t:"私下一个个聊，把人拢过来", w:[0,1,0,0,2,0]},
+    {t:"等他们吵完，总有人会妥协", w:[0,0,1,2,0,0]}]},
+  {q:"你的备忘录里最多的是……", o:[
+    {t:"待办清单", w:[0,0,2,1,0,0]},
+    {t:"奇怪的想法和涂鸦", w:[0,1,0,0,0,2]},
+    {t:"别人的事：生日、说过的话、爱吃什么", w:[0,0,1,0,2,0]},
+    {t:"三年后我要站在哪里", w:[2,0,0,2,0,0]}]},
+  {q:"你最受不了哪种人？", o:[
+    {t:"说话不算话的", w:[1,0,2,0,0,0]},
+    {t:"明明有本事不用，还怪环境的", w:[1,0,0,2,0,0]},
+    {t:"冷冰冰、谁都不管的", w:[0,0,0,0,2,1]},
+    {t:"一点意思都没有，什么都不敢试", w:[0,0,0,2,0,2]}]},
+  {q:"你被误会了。", o:[
+    {t:"一定要解释清楚", w:[1,0,2,0,0,0]},
+    {t:"无所谓，懂的人自然懂", w:[0,0,0,2,0,1]},
+    {t:"很难受，但先扛着", w:[2,0,1,0,0,0]},
+    {t:"用行动慢慢把局面扭过来", w:[0,1,0,2,0,0]}]},
+  {q:"你在意的朋友最近突然沉默了。", o:[
+    {t:"直接问他怎么了", w:[2,0,0,0,1,0]},
+    {t:"就陪着，不提这件事", w:[0,0,1,0,2,0]},
+    {t:"观察几天，把原因找出来", w:[0,2,1,0,0,0]},
+    {t:"讲个笑话，先把气氛撬开", w:[0,0,0,0,1,2]}]},
+  {q:"拿到一道很难的题。", o:[
+    {t:"拆成小块，排个顺序", w:[0,1,2,0,0,0]},
+    {t:"先上手试，看能跑到哪", w:[2,0,0,0,0,1]},
+    {t:"找人一起想", w:[0,1,0,0,2,0]},
+    {t:"先想：这题凭什么考我", w:[0,2,0,1,0,0]}]},
+  {q:"你更愿意被人叫做……", o:[
+    {t:"可靠", w:[0,0,2,0,1,0]},
+    {t:"有意思", w:[0,0,0,1,0,2]},
+    {t:"有本事", w:[0,2,0,1,0,0]},
+    {t:"有种", w:[2,0,0,0,0,1]}]},
+  {q:"半夜睡不着，通常是因为……", o:[
+    {t:"明天的事还没准备好", w:[0,1,2,0,0,0]},
+    {t:"在想一个特别远的问题", w:[0,2,0,1,0,0]},
+    {t:"某个人说过的一句话", w:[0,0,0,0,2,1]},
+    {t:"就是睡不着，干脆起来干别的", w:[2,0,0,0,0,2]}]},
+  {q:"如果你有一件隐身衣。", o:[
+    {t:"去听听别人怎么评价我", w:[0,2,0,0,1,0]},
+    {t:"去所有写着「禁止进入」的地方", w:[2,0,0,0,0,2]},
+    {t:"用在能帮上别人的地方", w:[0,0,2,0,1,0]},
+    {t:"先想清楚怎么用才不算浪费", w:[0,2,0,1,0,0]}]},
+  {q:"你组织的活动出了岔子。", o:[
+    {t:"第一时间冲上去处理", w:[2,0,1,0,0,0]},
+    {t:"先把责任理清楚", w:[0,2,1,0,0,0]},
+    {t:"先安抚被影响的人", w:[1,0,0,0,2,0]},
+    {t:"硬着头皮撑住，不能垮", w:[1,0,0,2,0,0]}]},
+  {q:"你更喜欢哪种天气？", o:[
+    {t:"阴天，适合想事情", w:[0,2,0,1,0,0]},
+    {t:"暴雨，痛快", w:[2,0,0,0,0,2]},
+    {t:"晴天，人会好一点", w:[0,0,2,0,1,0]},
+    {t:"有风的日子，什么都可能变", w:[0,0,0,1,0,2]}]},
+  {q:"有人拿走了本该属于你的功劳。", o:[
+    {t:"当场说清楚", w:[2,0,0,1,0,0]},
+    {t:"记下来，找机会还回去", w:[0,1,0,2,0,0]},
+    {t:"算了，我自己清楚就行", w:[0,0,2,0,0,1]},
+    {t:"找老师或上级说明情况", w:[0,1,2,0,0,0]}]},
+  {q:"你会因为什么突然对一个人有好感？", o:[
+    {t:"他说话很有意思", w:[0,1,0,0,0,2]},
+    {t:"他做事让人放心", w:[0,0,2,0,1,0]},
+    {t:"他敢做别人不敢做的事", w:[2,0,0,1,0,0]},
+    {t:"他好像能看穿我", w:[0,1,0,0,2,0]}]},
+  {q:"你被安排了一堆打杂的活。", o:[
+    {t:"认真做完，顺手把流程改好", w:[0,1,2,0,0,0]},
+    {t:"先敷衍过去，时间留给重要的事", w:[0,1,0,2,0,0]},
+    {t:"做着做着，跟所有人都熟了", w:[0,0,0,0,2,1]},
+    {t:"做得比谁都好，让人无话可说", w:[1,0,0,2,0,0]}]},
+  {q:"你心里有个从没跟人说过的东西。", o:[
+    {t:"一个特别想赢的目标", w:[2,0,0,2,0,0]},
+    {t:"一个别人会觉得奇怪的想法", w:[0,1,0,0,0,2]},
+    {t:"一个放不下的人", w:[0,0,0,1,2,0]},
+    {t:"一件自己没做好的事", w:[0,0,2,0,1,0]}]},
+  {q:"队伍里最勇敢的那个人倒下了。", o:[
+    {t:"顶上", w:[2,0,1,0,0,0]},
+    {t:"先看还有没有别的路", w:[0,2,0,0,0,1]},
+    {t:"先稳住其他人", w:[0,0,1,0,2,0]},
+    {t:"接过指挥权", w:[0,0,0,2,0,1]}]},
+  {q:"你更像哪种动物？", o:[
+    {t:"鹰：看得远，自己飞", w:[0,2,0,1,0,0]},
+    {t:"狼：成群，也独立", w:[2,0,0,1,0,0]},
+    {t:"狗：认了一个人就认一辈子", w:[0,0,2,0,2,0]},
+    {t:"猫：谁也管不着", w:[2,0,0,0,0,2]}]},
+  {q:"睡前最后一件事……", o:[
+    {t:"确认闹钟和明天的安排", w:[0,1,2,0,0,0]},
+    {t:"刷一会儿手机", w:[0,0,0,0,1,2]},
+    {t:"想今天有没有说错话", w:[0,1,0,0,2,0]},
+    {t:"想明天要怎么赢", w:[2,0,0,2,0,0]}]},
+  {q:"有人对你说「我信你」。", o:[
+    {t:"心里一热，记很久", w:[0,0,1,0,2,0]},
+    {t:"有点压力", w:[2,0,1,0,0,0]},
+    {t:"开始想他为什么这么说", w:[0,2,0,1,0,0]},
+    {t:"那你看着吧", w:[2,0,0,2,0,0]}]},
+  {q:"如果给这一生定一个主题……", o:[
+    {t:"把事情做对", w:[0,1,2,0,0,0]},
+    {t:"把想做的事做成", w:[2,0,0,2,0,0]},
+    {t:"把在乎的人护好", w:[1,0,1,0,2,0]},
+    {t:"把这世界看明白", w:[0,2,0,0,0,1]}]}
+];
+
+const CHARS = [
+  {id:"harry", name:"哈利·波特", tag:"格兰芬多 · 大难不死的男孩", v:[5,3,1,3,4,4],
+   why:"你身上有一种不太体面的勇敢——明明怕得要死，还是会往前迈一步。你不太擅长规划，但真出事的那一刻，第一个站出来的人往往是你。别人给你安排好的那种人生，你过不下去。",
+   egg:"你的「主角体质」其实是个副作用：被人夸的时候，你第一反应是「他是不是有事要拜托我」。",
+   s:"我不完美，但关键时刻我在。"},
+
+  {id:"hermione", name:"赫敏·格兰杰", tag:"格兰芬多 · 图书馆常驻", v:[3,5,5,3,2,0],
+   why:"你信一件事：慌没有用，把资料读完才有用。你的安全感来自「我准备好了」。别人说你太较真，其实你只是不肯拿「差不多」去赌自己在乎的人和事。",
+   egg:"你嘴上说「我早说过」，而且你真的早就说过——写在备忘录第 37 条。",
+   s:"我不是爱管，我是准备好了。"},
+
+  {id:"ron", name:"罗恩·韦斯莱", tag:"格兰芬多 · 一窝红头发里的那个", v:[2,0,3,0,5,4],
+   why:"你不是最耀眼的那个，但你是最能待住的那个。你有一种很稀缺的本事：让身边的人放松下来。你嘴上抱怨，腿上却跟着走，朋友真需要你，你一次都没掉过链子。",
+   egg:"你在群里的角色是「气氛组组长兼最后买单的那个人」，而且你乐在其中。",
+   s:"我可以怕，但我不会走。"},
+
+  {id:"dumbledore", name:"阿不思·邓布利多", tag:"霍格沃茨校长 · 甜食爱好者", v:[4,5,3,2,4,5],
+   why:"你看人看得很准，但很少点破。你习惯先问一句「你为什么这么想」，再决定要不要出手。你能同时装下很多矛盾的东西：既温柔，也算得清。",
+   egg:"你抽屉里的糖比文件多；你安慰别人时用的道理，全是自己没做到的那些。",
+   s:"我可以看穿，但我选择体面。"},
+
+  {id:"snape", name:"西弗勒斯·斯内普", tag:"斯莱特林院长 · 魔药课", v:[4,5,4,4,0,0],
+   why:"你不解释，也不表演。你把在乎藏在最不体面的语气里——骂你，是因为不想看你烂掉。你身上有一种老派的固执：答应了的事，天塌下来也得做完。",
+   egg:"你嘴上说「随便」，实际已经替所有人把最难的那部分做完了。",
+   s:"我骂你，是因为我还在管你。"},
+
+  {id:"mcgonagall", name:"米勒娃·麦格", tag:"格兰芬多院长 · 变形课", v:[5,1,5,0,2,0],
+   why:"你的底线很清楚，而且你说到做到。你不靠说教赢人，你靠「我比谁都先到场」。你看不惯糊弄，但你会为认真的人，破一次自己的规矩。",
+   egg:"你说的「再给你一次机会」，从来不是第二次，是第四次。",
+   s:"规矩不是用来压人的，是用来托住人的。"},
+
+  {id:"hagrid", name:"鲁伯·海格", tag:"猎场看守 · 钥匙管理员", v:[5,0,0,0,5,4],
+   why:"你对这个世界的默认设置是「它是好的」。你很容易被一样东西打动——一只受伤的动物、一个没人理的人。你不聪明得让人有压力，但你可靠得让人敢说真话。",
+   egg:"你答应过「就养一只」，现在家里有七只，还有一只是违法的。",
+   s:"我这儿没有门，谁都能进。"},
+
+  {id:"luna", name:"卢娜·洛夫古德", tag:"拉文克劳 · 耳环会说话", v:[1,5,0,0,3,5],
+   why:"你不是不合群，你只是没兴趣假装合群。别人觉得你怪，你觉得别人累。你有一套自己解释世界的语法，而且它运行得挺好。",
+   egg:"你最擅长的事，是在所有人都慌的时候，说一句让全场安静下来的怪话。",
+   s:"我不是奇怪，我是没打算装。"},
+
+  {id:"neville", name:"纳威·隆巴顿", tag:"格兰芬多 · 草药课", v:[5,1,3,0,4,0],
+   why:"你的勇敢是慢热型的。平时你缩着，真到非站出来不可的那一秒，你会站出来，而且不打算退。你记得住别人对你好过的每一件小事，也记得住该还的那一天。",
+   egg:"你人生最高光的时刻，往往发生在你自己都觉得「要不算了」之后三秒。",
+   s:"我不是突然变勇敢，我是一直在等那一秒。"},
+
+  {id:"ginny", name:"金妮·韦斯莱", tag:"格兰芬多 · 蝙蝠精咒专业户", v:[5,3,1,5,2,4],
+   why:"你不怯场，也不等人给你让位。你喜欢什么就很直接，讨厌什么也不藏着。你的底气不是「我很强」，是「我不怕失去」。",
+   egg:"你最迷人的地方是——你从来不需要别人先喜欢你。",
+   s:"我喜欢你，跟你喜不喜欢我没关系。"},
+
+  {id:"twins", name:"弗雷德 & 乔治", tag:"格兰芬多 · 韦斯莱魔法把戏坊", v:[3,3,0,5,2,5],
+   why:"你受不了「本来就该这样」。你的人生信念是：既然这规矩这么无聊，那我改一改试试。你把聪明全用在「怎么让今天不那么难熬」上，而且效果拔群。",
+   egg:"你的计划分两种：好玩的，和更好玩的。没有一种能通过家长审核。",
+   s:"我改名了，现在叫「后果自负」。"},
+
+  {id:"sirius", name:"小天狼星·布莱克", tag:"格兰芬多 · 阿兹卡班越狱选手", v:[5,0,0,5,3,3],
+   why:"你身上有一股不肯被关起来的东西。你为一个人可以不顾一切，也可以为一句「这不公平」把整段日子掀翻。你的爱很响，响到有点吓人。",
+   egg:"你送人的礼物都是「我觉得酷」，但对方会留很多年。",
+   s:"我可以被困住，但我不认。"},
+
+  {id:"lupin", name:"莱姆斯·卢平", tag:"黑魔法防御术 · 月亮脸", v:[2,4,4,0,5,0],
+   why:"你是那种「自己身上有伤，还先问别人疼不疼」的人。你擅长把最难的部分自己消化掉，再给对方一个体面的说法。你不争，但你是所有人的退路。",
+   egg:"你的温柔其实有算计——你早就知道谁值得，只是从来不说。",
+   s:"我没事，真的。你先说你的。"},
+
+  {id:"draco", name:"德拉科·马尔福", tag:"斯莱特林 · 有点贵的那种", v:[3,3,4,4,2,3],
+   why:"你在意体面，也在意排场。你嘴上从不认输，心里其实很怕让人失望。你的骄傲是一层壳，壳里面写着「我不能输，输了就什么都不是」。",
+   egg:"你嘴上最看不起的东西，往往是你偷偷最想要的东西。",
+   s:"我不是傲慢，我是不敢输。"},
+
+  {id:"narcissa", name:"纳西莎·马尔福", tag:"斯莱特林 · 布莱克家的小姐", v:[1,1,3,4,5,0],
+   why:"你话不多，但护起人来不讲道理。你的爱是那种「我可以不体面，但我在乎的人必须安全」的类型。你对世界没什么兴趣，对那几个人有全部兴趣。",
+   egg:"你可以在任何人面前镇定，只在一个人面前手抖。",
+   s:"全世界都可以误会我，你不许。"},
+
+  {id:"bellatrix", name:"贝拉特里克斯", tag:"斯莱特林 · 信念感过剩", v:[5,1,4,5,0,1],
+   why:"你信一件事就会信到底，中途不改口，也不打折。你不是没脑子，你是把脑子全用来「怎么做到」。这种人是队伍里最锋利的刀，也是最烫手的那种。",
+   egg:"你记仇的方式很讲究——你会先记住对方的生日。",
+   s:"我认下的事，我扛到底。"},
+
+  {id:"riddle", name:"汤姆·里德尔", tag:"斯莱特林 · 那个名字", v:[4,5,0,5,0,1],
+   why:"你天生不信「别人会替我」。你相信能力，相信自己，相信把自己变强是唯一安全的方案。你讨厌被看轻，讨厌被安排，也讨厌欠人情。",
+   egg:"你最强的能力其实是让人记住你——你随口一句「我们谈谈」，全场都会安静。",
+   s:"我不等谁给我位置，我自己造一个。"},
+
+  {id:"grindelwald", name:"盖勒特·格林德沃", tag:"德姆斯特朗 · 更宏大的那个", v:[4,5,0,5,0,5],
+   why:"你想要的不只是赢，是「换一套规则」。你看得比别人远，也比别人更敢下手。你有一种能把人说到热血上头的气场——这很危险，也很迷人。",
+   egg:"你最容易栽的地方从来不是敌人，是一个和你一样聪明、还比你多情的人。",
+   s:"世界太旧了，我打算改改。"},
+
+  {id:"molly", name:"莫丽·韦斯莱", tag:"陋居 · 会吼的怀抱", v:[5,0,3,3,5,1],
+   why:"你的爱是行动派的：饭做上、毛衣织上，谁欺负我家人我上。你在意的是「有没有人饿着、冷不冷、有没有被欺负」，而不是道理到底站谁那边。",
+   egg:"你的「我数到三」，从来数不到三。",
+   s:"先吃饭，剩下的事我扛。"},
+
+  {id:"arthur", name:"亚瑟·韦斯莱", tag:"麻瓜联络处 · 对插头着迷", v:[1,4,4,0,5,4],
+   why:"你对世界的好奇心没被年龄磨掉。你会为一支圆珠笔、一个电水壶停下来研究半小时。你脾气好得离谱，但你有自己的怪癖清单，而且非常坚持。",
+   egg:"你的收藏夹里有一整套「麻瓜日常用品」，分类比工作文件夹还细。",
+   s:"这个怎么用？教教我。"},
+
+  {id:"percy", name:"珀西·韦斯莱", tag:"魔法部 · 规矩的第一读者", v:[2,3,5,4,0,0],
+   why:"你相信流程能救人，也相信「按规矩来」是一种尊严。你在意位置、在意体面，也真的想把事情做好。你偶尔显得不近人情，是因为你把责任看得比交情重。",
+   egg:"你写的邮件有编号，而且你真的引用了上一封的第三段。",
+   s:"按流程走，我保证不出事。"},
+
+  {id:"trelawney", name:"西比尔·特里劳妮", tag:"占卜课 · 水晶球爱好者", v:[0,1,0,0,4,5],
+   why:"你的直觉准得让人不舒服。你不靠推理，你靠「感觉不对」。你有点爱演，那是因为你真的看见了别人没看见的东西，而且没人信你。",
+   egg:"你随口说的一句丧气话，三天后精准应验——你自己也吓一跳。",
+   s:"我说不清为什么，但我知道会这样。"},
+
+  {id:"dobby", name:"多比", tag:"家养小精灵 · 自由的耳朵", v:[2,0,1,0,5,2],
+   why:"你的忠诚不是被要求的，是自己选的。你受了委屈也不变坏，还会反过来替欺负过你的人操心。你要的从来不多，只是「被当个人看」。",
+   egg:"你说「不」的方式很笨，但你说完之后，所有人都会记住。",
+   s:"我自由了，但我还是想对你好。"},
+
+  {id:"tonks", name:"尼法朵拉·唐克斯", tag:"傲罗 · 头发会变色", v:[4,2,2,2,4,5],
+   why:"你的情绪是写在脸上的，而且你懒得藏。你能一边把气氛搞活，一边在关键时刻比谁都稳。你不喜欢被规矩框住，但你会为在意的人变得非常可靠。",
+   egg:"你换发色不是爱美，是心情播报——熟人一眼就能读出你今天几级。",
+   s:"我今天是什么颜色，就什么心情。"},
+
+  {id:"moody", name:"阿拉斯托·穆迪", tag:"傲罗 · 疯眼汉", v:[5,4,4,0,1,0],
+   why:"你对世界的第一反应是「先看看有没有问题」。你不轻信、不图省事；别人嫌你多疑，你只是见过太多意外。你护人的方式很硬，但很管用。",
+   egg:"你去任何地方都先看出口在哪，包括别人家。",
+   s:"别急，先看清再走。"},
+
+  {id:"cedric", name:"塞德里克·迪戈里", tag:"赫奇帕奇 · 那个几乎完美的人", v:[4,2,5,1,4,0],
+   why:"你是那种「有本事还不讨人厌」的人。你会赢，但不踩人；你会帮，但不邀功。你心里有一把很直的尺，量自己也量别人，而且两边都量得很严。",
+   egg:"你被夸「人真好」的时候会有点尴尬，因为你其实非常在乎输赢。",
+   s:"我可以赢，但我不想赢得难看。"},
+
+  {id:"cho", name:"秋·张", tag:"拉文克劳 · 魁地奇找球手", v:[0,3,3,0,5,1],
+   why:"你心里有很多没说出口的东西。你重感情，也重体面，所以常常一边心软一边装作没事。你的温柔不吵闹，但要很久才能真正放下。",
+   egg:"你把一件事在心里想了很多遍，却几乎没跟当事人说过。",
+   s:"我说没事的时候，其实是有事的。"},
+
+  {id:"slughorn", name:"霍拉斯·斯拉格霍恩", tag:"斯莱特林 · 人脉收藏家", v:[1,4,1,4,3,3],
+   why:"你有一种很少见的能力：记得住每个人的长处，并且愿意当面说出来。你喜欢有用的关系，也真心喜欢那些有光的人。你不争第一，你更想坐在能看见所有人的那张桌上。",
+   egg:"你的通讯录分组，比你的工作计划还精细。",
+   s:"你值得被更多人认识。"},
+
+  {id:"peeves", name:"皮皮鬼", tag:"霍格沃茨的另一种住户", v:[2,2,0,1,0,5],
+   why:"你的内核是「不服」。你讨厌严肃的场合，讨厌被人指挥，讨厌那种好好说话就能解决的事。你的破坏力不伤人，但专门挑最不能玩的时候玩。",
+   egg:"你最爱的不是捣乱本身，是全场憋不住笑出来的那一秒。",
+   s:"气氛太严肃了，我来一下。"},
+
+  {id:"dudley", name:"达力·德思礼", tag:"女贞路 · 麻瓜，后期版本", v:[2,0,3,2,4,1],
+   why:"你是被生活磨过一圈之后才变好的人，所以你的温柔是真的，不是天生好脾气。你不太爱想抽象的事，但你对具体的人很实在。你不擅长表达，但关键时刻你会站到对的那一边。",
+   egg:"你后来最常说的话是「这事我以前做得不对」，然后闭嘴，不再辩解。",
+   s:"我不太会说，但我会做对的那件事。"}
+];
+/*DATA-END*/
+
+/* ============================================================
+   评分：每个维度的实际得分 / 该维度最高可得，得到 0–1 的画像
+   再用「去均值后求余弦」匹配人物，避免大家都像同一个人
+   ============================================================ */
+const MAXP = [0,0,0,0,0,0];
+QUESTIONS.forEach(q=>{
+  for(let d=0;d<6;d++){
+    MAXP[d] += Math.max.apply(null, q.o.map(op=>op.w[d]));
+  }
+});
+function profileOf(ans){
+  const sum=[0,0,0,0,0,0];
+  ans.forEach((pick,qi)=>{
+    if(pick==null) return;
+    QUESTIONS[qi].o[pick].w.forEach((n,d)=>sum[d]+=n);
+  });
+  return sum.map((v,d)=> MAXP[d] ? v/MAXP[d] : 0);
+}
+function center(v){
+  const m = v.reduce((a,b)=>a+b,0)/v.length;
+  const c = v.map(x=>x-m);
+  const len = Math.sqrt(c.reduce((a,b)=>a+b*b,0)) || 1;
+  return c.map(x=>x/len);
+}
+function matchAll(p){
+  const pc = center(p);
+  return CHARS.map(ch=>{
+    const cc = center(ch.v);
+    const r = pc.reduce((a,b,i)=>a+b*cc[i],0);
+    return {ch, r, pct: Math.max(36, Math.min(99, Math.round(50 + 50*r)))};
+  }).sort((a,b)=>b.r-a.r);
+}
+/* 首位至少 87%，避免出现「你的灵魂只对上了 66%」这种扫兴文案 */
+function pctText(n){ return n + "%"; }
+
+/* ============================================================
+   交互
+   ============================================================ */
+const el = id => document.getElementById(id);
+const screens = {intro:el("intro"), quiz:el("quiz"), think:el("think"), result:el("result")};
+let idx = 0;            // 当前第几题
+let answers = [];       // 已选答案，可回看可改
+let locked = false;
+let finalTop = null;
+
+function show(name){
+  Object.keys(screens).forEach(k=>screens[k].classList.toggle("on", k===name));
+}
+function updateHud(){
+  const answered = answers.filter(a=>a!=null).length;
+  if(screens.intro.classList.contains("on")){
+    el("hudCount").textContent = "40 题";
+    el("barFill").style.width = "0";
+    el("backBtn").classList.remove("on");
+    return;
+  }
+  el("hudCount").innerHTML = `<b>${String(Math.min(answered,40)).padStart(2,"0")}</b> / 40`;
+  el("barFill").style.width = (answered/40*100) + "%";
+  el("backBtn").classList.toggle("on", screens.quiz.classList.contains("on") && idx>0);
+}
+
+/* 渲染一道题 */
+function renderQ(){
+  const q = QUESTIONS[idx];
+  const wrap = el("qwrap");
+  const saved = answers[idx];
+  wrap.className = "qwrap";
+  wrap.innerHTML = `
+    <span class="qwm" aria-hidden="true">${String(idx+1).padStart(2,"0")}</span>
+    <p class="qnum">第 ${String(idx+1).padStart(2,"0")} 题</p>
+    <h2 class="qtext">${q.q}</h2>
+    <div class="opts" id="opts">
+      ${q.o.map((op,i)=>`
+        <button class="opt${saved===i?" sel":""}" data-i="${i}">
+          <span class="k">${"ABCD"[i]}</span>
+          <span>${op.t}</span>
+          <svg class="ck" viewBox="0 0 24 24" fill="none" stroke="#E7B25F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5.5 5.5L20 7"/></svg>
+        </button>`).join("")}
+    </div>
+    <p class="qhint">选第一感觉，不要想太多</p>
+  `;
+  void wrap.offsetWidth;       // 触发一次重排，让入场动画重新播
+  wrap.classList.add("in");
+  wrap.querySelectorAll(".opt").forEach(btn=>{
+    btn.addEventListener("click", ()=>choose(Number(btn.dataset.i)));
+  });
+  el("hudTag").textContent = "霍格沃茨 · 分院帽";
+  updateHud();
+}
+
+function choose(i){
+  if(locked) return;
+  locked = true;
+  const opts = el("opts").querySelectorAll(".opt");
+  opts.forEach((b,k)=>{
+    b.classList.toggle("sel", k===i);
+    if(k!==i) b.classList.add("fade");
+  });
+  answers[idx] = i;
+  updateHud();
+  setTimeout(()=>{
+    locked = false;
+    if(idx >= QUESTIONS.length-1){ startThink(); }
+    else { idx++; renderQ(); }
+  }, 340);
+}
+
+/* 分院帽思考：把等待做成内容 */
+const THINK_LINES = [
+  "它正在翻阅那份很长的名单……",
+  "嗯……有点难分。",
+  "勇气、温度、还有一点不合规矩。",
+  "它把帽子放下来了。"
+];
+function startThink(){
+  show("think");
+  el("hudTag").textContent = "分院帽 · 正在判断";
+  el("hudCount").innerHTML = `<b>40</b> / 40`;
+  el("barFill").style.width = "100%";
+  el("backBtn").classList.remove("on");
+  finalTop = matchAll(profileOf(answers));
+  let k = 0;
+  const line = el("thinkLine");
+  line.textContent = THINK_LINES[0];
+  const timer = setInterval(()=>{
+    k++;
+    if(k < THINK_LINES.length){
+      line.classList.add("hide");
+      setTimeout(()=>{ line.textContent = THINK_LINES[k]; line.classList.remove("hide"); }, 220);
+    }else{
+      clearInterval(timer);
+      setTimeout(renderResult, 700);
+    }
+  }, 620);
+}
+
+/* 结果页 */
+function renderResult(){
+  const top = finalTop[0];
+  const ch = top.ch;
+  const p = profileOf(answers);
+  const dims = p.map((v,i)=>({n:DIMS[i], v:Math.round(v*100)}));
+  const runner = finalTop[1], third = finalTop[2];
+  const topPct = Math.max(87, top.pct);
+
+  el("resultScroll").innerHTML = `
+    <article class="rcard anim">
+      <div class="r-top">
+        <p class="r-kicker">分院帽的结论</p>
+        <div class="r-pct"><b>${topPct}</b><span>% 契合</span></div>
+      </div>
+      <h2 class="r-name">${ch.name}</h2>
+      <p class="r-tag">${ch.tag}</p>
+
+      <div class="r-rule"></div>
+
+      <div class="sec-h">为什么是你</div>
+      <p class="sec-p">${ch.why}</p>
+
+      <div class="sec-h">隐藏特质 & 小彩蛋</div>
+      <div class="egg"><b>彩蛋 ·</b> ${ch.egg}</div>
+
+      <div class="dims">
+        ${dims.map(d=>`
+          <div class="dim"><span class="n">${d.n}</span>
+            <span class="t"><i data-w="${d.v}"></i></span><b>${d.v}</b></div>`).join("")}
+      </div>
+
+      <p class="runner">帽子在你身上还看见了 <b>${runner.ch.name}</b> 和 <b>${third.ch.name}</b> 的影子——
+        你不是他们中的任何一个，但你确实借了他们一点东西。</p>
+
+      <div class="slogan">
+        <p class="q">${ch.s}</p>
+        <div class="row">
+          <span>Share this line</span>
+          <button class="copy" id="copyBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            复制这句
+          </button>
+        </div>
+      </div>
+
+      <!-- 蜡封：结果卡的落款 -->
+      <svg class="stamp" viewBox="0 0 92 92" aria-hidden="true">
+        <circle cx="46" cy="46" r="42" fill="none" stroke="#8A6A3A" stroke-width="2"/>
+        <circle cx="46" cy="46" r="33" fill="none" stroke="#8A6A3A" stroke-width="1"/>
+        <path d="M46 24l6 14 15 1-11 10 3 15-13-8-13 8 3-15-11-10 15-1z" fill="#8A6A3A" opacity=".8"/>
+      </svg>
+    </article>
+
+    <div class="acts anim d2">
+      <button class="btn btn-primary" id="againBtn">重新测一次</button>
+      <button class="btn btn-ghost" id="shareBtn">复制整段结果，发给朋友</button>
+    </div>
+    <p class="disclaimer">结果来自 40 题的性格画像，仅供娱乐。人和帽子都会变，明天重测可能是另一个人。</p>
+  `;
+
+  // 六维条：下一帧再填，才有生长感
+  requestAnimationFrame(()=>{
+    el("resultScroll").querySelectorAll(".dim .t i").forEach(bar=>{
+      bar.style.width = bar.dataset.w + "%";
+    });
+  });
+
+  el("copyBtn").addEventListener("click", ()=>copyText(`「${ch.name}」— ${ch.s}`));
+  el("shareBtn").addEventListener("click", ()=>copyText(
+    `我测出来是「${ch.name}」，契合度 ${topPct}%。\n「${ch.s}」\n你也来测测：测一测|你的灵魂对应哪位魔法世界人物`
+  ));
+  el("againBtn").addEventListener("click", reset);
+  el("resultScroll").scrollTop = 0;
+
+  show("result");
+  el("hudTag").textContent = "分院帽 · 已分完";
+  updateHud();
+  el("backBtn").classList.remove("on");
+}
+
+/* 复制（含降级方案） */
+function copyText(text){
+  const done = ()=>toast("已复制，去粘贴吧");
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
+  }else{
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.cssText = "position:fixed;top:-9999px;opacity:0";
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand("copy") ? done() : toast("长按手动复制吧"); }
+  catch(e){ toast("长按手动复制吧"); }
+  document.body.removeChild(ta);
+}
+let toastTimer = null;
+function toast(msg){
+  const t = el("toast");
+  t.textContent = msg;
+  t.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("on"), 1800);
+}
+
+/* 重测 */
+function reset(){
+  idx = 0; answers = []; locked = false; finalTop = null;
+  el("barFill").style.width = "0";
+  show("quiz");
+  renderQ();
+}
+
+/* 按钮 */
+el("startBtn").addEventListener("click", ()=>{
+  idx = 0; answers = [];
+  show("quiz");
+  renderQ();
+});
+el("backBtn").addEventListener("click", ()=>{
+  if(idx > 0 && !locked){
+    idx--;
+    renderQ();
+  }
+});
+updateHud();
+</script>
+</body>
+</html>
